@@ -1,4 +1,4 @@
-package com.example.junit5starter.paramresolver;
+package com.example.junit5starter.extension;
 
 import com.example.junit5starter.services.UserService;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -22,7 +22,7 @@ public class UserServiceParamResolver implements ParameterResolver {
 
 //        Store store = extensionContext.getStore(
 //        Namespace.create(extensionContext.getTestMethod())); // для каждого метода новый объект
-        return store.getOrComputeIfAbsent(UserService.class, it -> new UserService());
+        return store.getOrComputeIfAbsent(UserService.class, it -> new UserService(null));
     }
 
 }

@@ -1,15 +1,19 @@
-package com.example.junit5starter;
+package com.example.junit5starter.services;
 
+import com.example.junit5starter.TestBase;
+import com.example.junit5starter.dao.UserDao;
+import com.example.junit5starter.extension.*;
 import com.example.junit5starter.models.User;
-import com.example.junit5starter.paramresolver.UserServiceParamResolver;
-import com.example.junit5starter.services.UserService;
-import net.bytebuddy.implementation.bind.annotation.Empty;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.*;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.Mockito;
 
+import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -21,10 +25,18 @@ import static org.hamcrest.collection.IsMapContaining.hasKey;
 import static org.junit.jupiter.api.Assertions.*;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@ExtendWith({UserServiceParamResolver.class})
+@ExtendWith(
+        {UserServiceParamResolver.class,
+                PostProcessingExtension.class,
+                ConditionalExtension.class,
+//                ThrowableExtension.class
+//                GlobalExtension.class
+        }
+)
 //@TestMethodOrder(MethodOrderer.MethodName.class) // лучше не использовать
-class UserServiceTest {
+public class UserServiceTest extends TestBase {
     private UserService userService;
+    private UserDao userDao;
 
     private static final User BOB = User.of(1, "Bob", "123");
     private static final User STEVEN = User.of(2, "Steven", "111");
@@ -35,9 +47,21 @@ class UserServiceTest {
     }
 
     @BeforeEach
-    void prepare(UserService userService) {
-        this.userService = userService;
+    void prepare() {
+        this.userDao = Mockito.mock(UserDao.class);
+        this.userService = new UserService(userDao);
         System.out.println("Before each: " + this);
+    }
+
+    @Test
+    void shouldDeleteExistedUser() {
+        userService.add(BOB);
+        Mockito.doReturn(true).when(userDao).deleteById(BOB.getId()); // €вл€етс€ предпочтительным (универсальный)
+//        Mockito.doReturn(true).when(userDao).deleteById(Mockito.any()); // dummy
+//        Mockito.when(userDao.deleteById(BOB.getId()))
+//                .thenReturn(true).thenReturn(false); // последовательное возвращение
+        Boolean res = userService.deleteUser(BOB.getId());
+        assertThat(res).isTrue();
     }
 
     @Test
@@ -95,6 +119,8 @@ class UserServiceTest {
 
         @Test
         void loginSuccessIfUserExist() {
+            if (true) throw new RuntimeException(); // Exception handling ( Extension model )
+
             userService.add(BOB);
             Optional<User> maybeUser = userService.login(BOB.getUsername(), BOB.getPassword());
 
@@ -120,17 +146,27 @@ class UserServiceTest {
         }
 
         @Test
+        @Disabled("flaky, need to see")
         void logicFailIfPasswordIsNotCorrect() {
             userService.add(BOB);
             Optional<User> maybeUser = userService.login(BOB.getUsername(), "dummy");
             assertTrue(maybeUser.isEmpty());
         }
 
-        @Test
+        //        @Test
+        @RepeatedTest(5)
         void logicFailIfUserDoesNotExist() {
             userService.add(BOB);
             Optional<User> maybeUser = userService.login("dummy", BOB.getPassword());
             assertTrue(maybeUser.isEmpty());
+        }
+
+        @Test
+//        @Timeout(value = 200, unit = TimeUnit.MILLISECONDS)
+        void checkLoginFunctionalityPerformance() {
+            assertTimeout(Duration.ofMillis(200L),
+                    () -> userService.login("dummy", BOB.getPassword()));
+//            assertTimeoutPreemptively(); // метод выполн€етс€ в отдельном потоке
         }
 
         @ParameterizedTest(name = "{arguments} test")

@@ -1,6 +1,6 @@
 package com.example.junit5starter;
 
-import org.junit.platform.engine.DiscoverySelector;
+import com.example.junit5starter.services.UserServiceTest;
 import org.junit.platform.engine.discovery.DiscoverySelectors;
 import org.junit.platform.launcher.Launcher;
 import org.junit.platform.launcher.LauncherDiscoveryRequest;
